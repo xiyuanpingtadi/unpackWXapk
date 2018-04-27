@@ -5,28 +5,43 @@ try{
     $file = loadFile($package,$unzipSave);
     $headerInfo = unzipHeader($file);
     for ($i = 0; $i < $header['fileCount']; $i++) {
-        $nameLength = $unpackULong();
-        $f = [
-            'nameLength' => $nameLength,
-            'name' => $unpackStr($nameLength),
-            'offset' => $unpackULong(),
-            'size' => $unpackULong(),
-        ];
-        echo "Unpacking file {$f['name']} ({$f['size']}bytes)...\n";
-        $f['content'] = substr($file, $f['offset'], $f['size']);
-        $unpackedFiles[] = $f;
-        $destFile = $targetDir . $f[ 'name'];
+        $nameLength = unpackULong($file,$ptr);
+        $fileData = array(  'nameLength' => $nameLength,
+                            'name' => getName($nameLength),
+                            'offset' => unpackULong($file,$ptr),
+                            'size' =>unpackULong($file,$ptr)
+                        );
+        echo "Unpacking file {$fileData['name']} ({$fileData['size']}bytes)...\n";
+        $f['content'] = substr($file, $fileData['offset'], $fileData['size']);
+        $unpackedFiles[] = $fileData;
+        $destFile = $targetDir . $fileData[ 'name'];
         $destDir = dirname($destFile);
         if (!is_dir($destDir)){
             mkdir($destDir, 0777, true);
         }
-        file_put_contents($targetDir . $f['name'], $f['content']);
+        file_put_contents($targetDir . $fileData['name'], $fileData['content']);
     }
 } catch (Exception $e) {
     echo 'Error:'.$e->getMessage();
 }
 
+function getName($length,&$data,&$ptr)
+{
+    $ptr = $ptr + $length;
+    return substr($data,$ptr-$length,$length);
+}
 
+function unpackUlong(&$data,&$ptr)
+{
+    $ptr = $ptr + 4;
+    return unpack('N',substr($data, $ptr-4, 4))[1];
+}
+
+function unpackUshort(&$data,&$ptr)
+{
+    $ptr = $ptr + 2;
+    return unpack('n', substr($file, $ptr-2, 2))[1];
+}
 function loadFile($package,$unzipSave)
 {
     if (!is_file($package))
