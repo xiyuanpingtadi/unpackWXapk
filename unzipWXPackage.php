@@ -4,7 +4,7 @@ $unzipSave = 'unzip_'.$package;
 try{
     $file = loadFile($package,$unzipSave);
     $headerInfo = unzipHeader($file);
-    for ($i = 0; $i < $header['fileCount']; $i++) {
+    for ($i = 0; $i < $headerInfo['fileCount']; $i++) {
         $nameLength = unpackULong($file,$ptr);
         $fileData = array(  'nameLength' => $nameLength,
                             'name' => getName($nameLength),
@@ -57,7 +57,7 @@ function loadFile($package,$unzipSave)
     return $file;  
 }
 
-function unzipHeader()
+function unzipHeader($file)
 {
     $type = array(
         'firstMark' => 'n',  //ushort 大端字节序 2个字节
@@ -67,8 +67,9 @@ function unzipHeader()
         'lastMark' => 'n',     //头部信息结束标志
         'fileCount' => 'N',     //文件数量统计
     );
+    $format = '';
     foreach ($type as $key => $value) {
-        $format .= ($vale.$key.'/');   //拼装unpack函数所需的format
+        $format .= ($value.$key.'/');   //拼装unpack函数所需的format
     }
     return unpack($format,$file);
 }
