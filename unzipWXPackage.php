@@ -1,46 +1,48 @@
 <?php
 $package = $argv[1];
-$unzipSave = 'unzip_'.$package;
+$unzipSave = $package.'_unzip';
+$subSize = 18;
 try{
     $file = loadFile($package,$unzipSave);
     $headerInfo = unzipHeader($file);
     for ($i = 0; $i < $headerInfo['fileCount']; $i++) {
-        $nameLength = unpackULong($file,$ptr);
+        $nameLength = unpackULong($file,$subSize);
         $fileData = array(  'nameLength' => $nameLength,
-                            'name' => getName($nameLength),
-                            'offset' => unpackULong($file,$ptr),
-                            'size' =>unpackULong($file,$ptr)
+                            'name' => getName($nameLength,$file,$subSize),
+                            'offset' => unpackULong($file,$subSize),
+                            'size' =>unpackULong($file,$subSize)
                         );
-        echo "Unpacking file {$fileData['name']} ({$fileData['size']}bytes)...\n";
-        $f['content'] = substr($file, $fileData['offset'], $fileData['size']);
+        echo "正在解压文件".$fileData['name']."共计".((int)$fileData['size']/1024)."KB...\n";
+        $fileData['content'] = substr($file, $fileData['offset'], $fileData['size']);
         $unpackedFiles[] = $fileData;
-        $destFile = $targetDir . $fileData[ 'name'];
+        $destFile = $unzipSave . $fileData[ 'name'];
         $destDir = dirname($destFile);
         if (!is_dir($destDir)){
             mkdir($destDir, 0777, true);
         }
-        file_put_contents($targetDir . $fileData['name'], $fileData['content']);
+        file_put_contents($unzipSave . $fileData['name'], $fileData['content']);
     }
+    echo '解压完成共计'.$headerInfo['fileCount'].'个文件';
 } catch (Exception $e) {
     echo 'Error:'.$e->getMessage();
 }
 
-function getName($length,&$data,&$ptr)
+function getName($length,&$data,&$subSize)
 {
-    $ptr = $ptr + $length;
-    return substr($data,$ptr-$length,$length);
+    $subSize = $subSize + $length;
+    return substr($data,$subSize-$length,$length);
 }
 
-function unpackUlong(&$data,&$ptr)
+function unpackUlong(&$data,&$subSize)
 {
-    $ptr = $ptr + 4;
-    return unpack('N',substr($data, $ptr-4, 4))[1];
+    $subSize = $subSize + 4;
+    return unpack('N',substr($data, $subSize-4, 4))[1];
 }
 
-function unpackUshort(&$data,&$ptr)
+function unpackUshort(&$data,&$subSize)
 {
-    $ptr = $ptr + 2;
-    return unpack('n', substr($file, $ptr-2, 2))[1];
+    $subSize = $subSize + 2;
+    return unpack('n', substr($file, $subSize-2, 2))[1];
 }
 function loadFile($package,$unzipSave)
 {
@@ -52,7 +54,7 @@ function loadFile($package,$unzipSave)
     if ($file == false) {
         throw new Exception("请输入正确的微信小程序地址！", 1);
     }else {
-        echo '正在解压....';
+        echo '正在解压....'.PHP_EOL;
     }  
     return $file;  
 }
@@ -63,7 +65,7 @@ function unzipHeader($file)
         'firstMark' => 'n',  //ushort 大端字节序 2个字节
         'info1' => 'N',         //ulong 大端字节序 全为0
         'indexInfoLength' => 'N',   //索引长度16位
-        'bodyInfoLength' => 'N',    //文件数据段长度16位储存
+        'bodyInfoLength' => 'n',    //文件数据段长度16位储存
         'lastMark' => 'n',     //头部信息结束标志
         'fileCount' => 'N',     //文件数量统计
     );
